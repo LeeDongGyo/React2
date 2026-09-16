@@ -1,5 +1,102 @@
 # 202230124 이동교
 
+## 9월 16일 (수)
+
+# Next.js 학습 요약
+
+## 1. 폴더 및 파일 컨벤션 (Folder & File Conventions)
+
+Next.js(App Router 기준)는 파일 시스템 기반의 라우팅을 사용하며, 특수한 이름을 가진 파일들을 통해 레이아웃, 로딩, 에러 처리 등을 직관적으로 정의할 수 있습니다.
+
+- **`page.js` / `page.tsx`**: 해당 경로(Route)의 고유한 UI를 담당하며, 퍼블릭(Public) 접근이 가능한 라우트를 생성합니다.
+- **`layout.js` / `layout.tsx`**: 여러 페이지 간에 공유되는 공통 레이아웃(헤더, 푸터 등)을 정의합니다. 상태를 유지하며 페이지 전환 시 리렌더링되지 않습니다.
+- **`template.js` / `template.tsx`**: `layout`과 유사하지만, 페이지가 이동할 때마다 **매번 새로운 인스턴스가 생성(마운트)**됩니다.
+- **`loading.js` / `loading.tsx`**: React의 Suspense를 기반으로 작동하며, 해당 세그먼트의 데이터를 불러오는 동안 보여줄 로딩 UI(스켈레톤 등)를 정의합니다.
+- **`error.js` / `error.tsx`**: 에러 발생 시 사용자에게 보여줄 Fallback UI를 정의합니다. 반드시 클라이언트 컴포넌트(`'use client'`)여야 합니다.
+- **`not-found.js` / `not-found.tsx`**: 404 Not Found 상황에서 렌더링되는 컴포넌트입니다.
+
+---
+
+## 2. Next.js 동적 라우팅 (Dynamic Routes)
+
+URL의 경로가 고정되지 않고 동적으로 변할 때 사용합니다.
+
+- **기본 동적 라우트**: 폴더명을 대괄호로 감싸서 생성합니다.
+  - 예: `app/blog/[id]/page.tsx` $\rightarrow$ `/blog/1`, `/blog/abc` 등으로 접속 가능
+- **파라미터 전달 받기**: 컴포넌트의 `params` 프로퍼티를 통해 값을 비동기로(또는 동적으로) 꺼내어 사용할 수 있습니다.
+
+  ```tsx
+  // app/blog/[id]/page.tsx
+  export default async function Page({
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }) {
+    const { id } = await params;
+    return <div>My Post: {id}</div>;
+  }
+  ```
+
+  # Next.js 프로젝트 구조화 (Organizing Your Project)
+
+Next.js는 파일 시스템 기반의 라우팅 방식을 사용하므로, 프로젝트의 규모가 커질수록 체계적인 구조화 전략이 매우 중요합니다. Next.js 공식 문서에서 권장하는 대표적인 파일 및 폴더 구조화 방식은 다음과 같습니다.
+
+## 1. 기능별 폴더 구조 (Feature-based / Colocation)
+
+- **개념**: 관련된 컴포넌트, 스타일, 타입, 훅 등을 전역에 거대하게 두는 것이 아니라, **특정 기능이나 도메인(Feature) 단위로 응집**시켜 묶는 방식입니다.
+- **특징**:
+  - 코드를 찾기 쉽고 유지보수성이 향상됩니다.
+  - 예: 전역에 `components/`, `hooks/`, `utils/`를 일일이 두기보다, 각 도메인 폴더 내부에 해당 기능 전용 파일을 응집시키는 형태입니다.
+
+## 2. 프라이빗 폴더 (`_` 폴더)
+
+- **개념**: 폴더명 앞에 언더스코어(`_`)를 붙여 생성하는 폴더입니다.
+- **특징**:
+  - Next.js 라우팅 시스템에서 **완전히 제외**됩니다. (예: `app/_components`는 URL 경로로 접근 불가)
+  - 라우팅과 무관한 내부 컴포넌트, 유틸리티, 스타일 파일 등을 안전하게 숨기고 분리할 때 매우 유용합니다.
+
+## 3. 라우트 그룹 (`(folder)`)
+
+- **개념**: 폴더명을 소괄호(`(그룹명)`)로 감싸서 만드는 방식입니다.
+- **특징**:
+  - **URL 경로에 전혀 영향을 주지 않으면서** 폴더들을 논리적으로 그룹화할 수 있습니다.
+  - 예: `app/(auth)/login/page.tsx`로 폴더를 구성하더라도, 실제 매핑되는 URL은 `/login`이 됩니다.
+  - 레이아웃을 공유하지 않아야 하는 페이지들을 묶거나, 관리용 폴더로 구조를 깔끔하게 정돈할 때 사용합니다.
+
+## 컴포넌트 구현 (components/SkeletonCard.tsx)
+
+export default function SkeletonCard() {
+return (
+
+<div className="p-4 border rounded-md shadow animate-pulse space-y-4">
+{/_ 이미지 영역 스켈레톤 _/}
+<div className="w-full h-48 bg-gray-200 rounded-md"></div>
+
+      {/* 텍스트 영역 스켈레톤 */}
+      <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded"></div>
+        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+      </div>
+    </div>
+
+);
+}
+
+## loading.tsx에 적용
+
+import SkeletonCard from "@/components/SkeletonCard";
+
+export default function Loading() {
+return (
+<div className="grid grid-cols-3 gap-4 p-6">
+<SkeletonCard/>
+<SkeletonCard/>
+<SkeletonCard/>
+</div>
+);
+}
+
 ## 9월 9일 (수)
 
 # Installation - 프로젝트 수동 생성
