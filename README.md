@@ -1,5 +1,156 @@
 # 202230124 이동교
 
+## 9월 23일 (수)
+
+## Slug (슬러그)의 이해
+
+### 개념 및 원리
+
+- Slug(슬러그)는 특정 페이지나 콘텐츠를 식별하기 위해 URL의 맨 마지막 부분에 붙는 사람이 읽을 수 있는 고유 문자열입니다.
+
+- 기존 방식 (Query Parameter 또는 ID): /blog?id=102 또는 /blog/102
+
+- Slug 방식: /blog/nextjs-routing-guide
+
+### 왜 Slug를 사용하는가?
+
+- SEO (검색엔진 최적화): 검색엔진은 URL 내부의 키워드를 분석합니다. URL에 nextjs-routing-guide 같은 키워드가 들어가면 검색 결과 상위 노출에 유리합니다.
+
+- 사용자 경험 (UX): 사용자가 URL 링크만 보고도 어떤 내용의 페이지인지 미리 예측할 수 있습니다.
+
+- 코드 깊이 보기
+
+```TypeScript
+import Link from "next/link"
+import { posts } from "./posts"
+
+export default function Page() {
+  return (
+    <div>
+      <h1>블로그 목록</h1>
+      <ul>
+        {posts.map((post) => (
+          // key 속성으로 post.slug 고유값을 전달하여 리액트 렌더링 최적화
+          <li key={post.slug}>
+            {/* 백틱(`)을 사용한 템플릿 리터럴로 동적 URL 생성 */}
+            <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+## Dynamic Segments (동적 세그먼트)
+
+### 개념 및 구조
+
+- 데이터에 따라 URL 경로가 달라질 때, 폴더 이름을 대괄호 [param]로 감싸서 동적 파라미터를 수신하는 구조입니다.
+
+- 디렉토리 구조 예시
+  Plaintext
+  app/
+  └── blog/
+  ├── page.tsx -> /blog (블로그 목록 페이지)
+  └── [slug]/
+  └── page.tsx -> /blog/hello-world, /blog/react-guide 등 (상세 페이지)
+
+### 동작 원리
+
+- 사용자가 /blog/nextjs-15로 접속합니다.
+
+- Next.js는 [slug] 폴더를 감지하고, slug = "nextjs-15"라는 파라미터(params)를 page.tsx에 인자로 전달합니다.
+
+- 해당 페이지 컴포넌트에서는 params.slug를 받아 DB나 API에서 해당하는 글을 조회합니다.
+
+## Nesting Layout (중첩 레이아웃)
+
+### 개념
+
+- Next.js App Router는 상위 경로의 레이아웃 안에 하위 경로의 레이아웃이나 페이지가 감싸지는(Nesting) 구조를 가집니다.
+
+## 레이아웃 중첩 구조 예시
+
+Plaintext
+app/
+├── layout.tsx -> 루트 레이아웃 (<html>, <body>, 공통 Header/Footer)
+└── blog/
+├── layout.tsx -> 블로그 전용 레이아웃 (블로그 사이드바, 카테고리)
+└── page.tsx -> 블로그 메인 콘텐츠
+실제 렌더링 형태 (HTML 상)
+
+```TypeScript
+<RootLayout>
+  <Header />
+  <BlogLayout>
+    <BlogSidebar />
+    <BlogPage /> {/* {children} 자리에 하위 페이지가 삽입됨 */}
+  </BlogLayout>
+  <Footer />
+</RootLayout>
+```
+
+중첩 레이아웃의 장점 (Partial Rendering)
+상태 유지 (State Preservation): 페이지를 이동하더라도 부모 레이아웃(RootLayout, BlogLayout)은 리렌더링되지 않습니다. (예: Header의 검색창 입력값, 사이드바 스크롤 위치 유지)
+
+네트워크 자원 절약: 변경되는 영역(children)의 HTML만 서버에서 받아와 교체하므로 화면 전환 속도가 빠릅니다.
+
+4. searchParams와 동적 렌더링 (Dynamic Rendering)
+   코드 세부 분석
+   TypeScript
+   export default async function ProductsPage({
+   searchParams
+   }: {
+   // Next.js 15부터 searchParams는 비동기 객체(Promise)로 다루어야 합니다.
+   searchParams: Promise<{ id?: string; name?: string }>
+   }) {
+   // await를 통해 Promise를 해제(unwrap)하고 기본값을 설정하는 구조분해 할당
+   const { id = "non id", name = "non name" } = await searchParams
+
+return (
+<div>
+<h1>Products Page</h1>
+<p>id : {id}</p>
+<p>name : {name}</p>
+</div>
+)
+}
+
+### searchParams 동작 방식
+
+- URL: /products?id=10&name=keyboard
+
+- 수신 객체: { id: "10", name: "keyboard" }
+
+- 기본값 설정 (Default Value): 쿼리 파라미터가 비어있는 /products 접속 시, id는 "non id", name은 "non name"으로 fallback 처리됩니다.
+
+- 왜 이 페이지는 '동적 렌더링(Dynamic Rendering)'이 되는가?
+  Next.js의 렌더링 방식은 크게 정적 렌더링(Static)과 동적 렌더링(Dynamic)으로 나뉩니다.
+
+1. 정적 렌더링 (Static Rendering)
+
+- 시점: 프로젝트를 빌드할 때(npm run build).
+
+- 원리: 서버에서 미리 HTML을 만들어 저장해 두고, 사용자가 들어오면 이미 만들어진 static HTML을 바로 내려줍니다. (속도가 매우 빠름)
+
+2. 동적 렌더링 (Dynamic Rendering)
+
+- 시점: 사용자가 요청할 때 (Request Time).
+
+- 원리: 사용자가 접속할 때마다 서버가 실시간으로 데이터를 조회해서 HTML을 매번 새로 그립니다.
+
+3. 자동 동적 전환 이유
+
+- searchParams는 사용자가 접속 시점에 브라우저 주소창에 직접 입력하는 쿼리 스트링입니다.
+
+- 빌드 시점 알 수 없음: npm run build를 수행하는 시점에는 어떤 사용자가 ?id=100으로 들어올지, ?id=999로 들어올지 미리 예측하는 것이 불가능합니다.
+
+- Dynamic API 판정: Next.js는 searchParams, cookies(), headers() 같은 요소를 "요청 시점에만 알 수 있는 Dynamic API"로 분류합니다.
+
+- 자동 전환: 따라서 searchParams를 읽어오는 컴포넌트가 포함된 페이지는 빌드 타임에 캐싱되지 않고, 사용자 요청 시마다 서버에서 새로 작동하는 동적 렌더링 페이지로 자동 전환됩니다.
+
+
 ## 9월 16일 (수)
 
 # Next.js 학습 요약
