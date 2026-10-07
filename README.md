@@ -1,5 +1,106 @@
 # 202230124 이동교
 
+9월 30일 (수)
+
+## 1. Catch-all 및 Optional Catch-all Segments
+
+### 개념 및 구조
+- single segment(`[slug]`)를 넘어 **여러 계층의 동적 경로**를 하나의 파일에서 한 번에 처리할 때 사용하는 전개 연산자(`...`) 기반 라우팅입니다.
+
+### 디렉토리 구조 및 매칭 규칙
+
+```plaintext
+app/
+├── docs/
+│   └── [...slug]/          -> Catch-all Segments
+│       └── page.tsx
+└── shop/
+    └── [[...slug]]/        -> Optional Catch-all Segments
+        └── page.tsx
+Catch-all ([...slug])/docs/a $\rightarrow$ params.slug = ['a']/docs/a/b/c $\rightarrow$ params.slug = ['a', 'b', 'c']주의: /docs 단독 접속 시 404 에러가 발생합니다.Optional Catch-all ([[...slug]])대괄호를 두 번 감싸면 루트 경로까지 매칭됩니다./shop $\rightarrow$ params.slug = undefined/shop/clothes/tops $\rightarrow$ params.slug = ['clothes', 'tops']코드 구조 (Next.js 15 기준)코드 스니펫export default async function DocsPage({
+  params,
+}: {
+  // Next.js 15부터 params는 Promise 객체입니다.
+  params: Promise<{ slug?: string[] }>
+}) {
+  const { slug } = await params
+
+  return (
+    <div>
+      <h1>Docs Depth: {slug?.length ?? 0}</h1>
+      <p>현재 경로 배열: {slug?.join(" / ") ?? "메인 페이지"}</p>
+    </div>
+  )
+}
+2. 특수 파일 (Special Files): Loading UI와 Error Handling개념App Router는 폴더 내 규약된 이름의 특수 파일을 생성하는 것만으로 로딩 상태, 에러 처리, 404 페이지를 선언적으로 처리할 수 있습니다.핵심 특수 파일 구조Plaintextapp/
+└── dashboard/
+    ├── layout.tsx
+    ├── page.tsx
+    ├── loading.tsx   -> React Suspense 기반 로딩 스켈레톤 UI
+    ├── error.tsx     -> React Error Boundary 기반 에러 핸들링 UI
+    └── not-found.tsx -> 404 전용 Custom Page
+동작 원리loading.tsx서버 컴포넌트가 데이터를 불러오는 동안(Data Fetching) 보여줄 Skeleton UI를 정의합니다.내부적으로 해당 page.tsx를 <Suspense fallback={<Loading />}>로 자동 감쌉니다.error.tsx하위 컴포넌트나 서버 액션 실행 중 발생한 예외를 캡처합니다.주의: 클라이언트 측에서 에러를 복구(reset)하고 대화형 UI를 제공해야 하므로 반드시 'use client' 지시어를 선언해야 합니다.코드 스니펫'use client' // Error Boundary는 반드시 Client Component여야 합니다.
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void // 페이지 재시도 함수
+}) {
+  return (
+    <div>
+      <h2>무언가 잘못되었습니다!</h2>
+      <p>{error.message}</p>
+      <button onClick={() => reset()}>다시 시도하기</button>
+    </div>
+  )
+}
+3. Route Groups (라우트 그룹)개념 및 필요성URL 경로(Path)에는 영향을 주지 않고, 폴더 구조를 정리하거나 서로 다른 레이아웃(Layout)을 분리 적용하고 싶을 때 폴더명을 괄호 (folderName)로 감싸서 생성합니다.디렉토리 구조 예시Plaintextapp/
+├── (marketing)/       -> URL에 "(marketing)"은 포함되지 않음
+│   ├── layout.tsx     -> 랜딩/마케팅용 헤더 포함 레이아웃
+│   ├── about/
+│   │   └── page.tsx   -> /about
+│   └── contact/
+│       └── page.tsx   -> /contact
+└── (auth)/            -> URL에 "(auth)"는 포함되지 않음
+    ├── layout.tsx     -> 로그인/회원가입 전용 (헤더/푸터 없음)
+    ├── login/
+    │   └── page.tsx   -> /login
+    └── register/
+        └── page.tsx   -> /register
+주요 장점URL 깔끔함 유지: /auth/login이 아닌 /login으로 깔끔한 URL을 유지하면서 관련 코드를 그룹화할 수 있습니다.레이아웃 분리: 마케팅 페이지 그룹과 회원가입 페이지 그룹의 루트 레이아웃을 다르게 가져갈 수 있습니다.4. Server Components와 Data Fetching개념Next.js App Router의 모든 컴포넌트는 기본적으로 서버 컴포넌트(Server Components)입니다.서버 컴포넌트 내부에서는 async/await를 사용하여 데이터베이스 접근이나 API 호출을 직접(Directly) 수행할 수 있습니다.코드 구조코드 스니펫type Post = {
+  id: number
+  title: string
+  body: string
+}
+
+export default async function BlogListPage() {
+  // useEffect나 useState 없이 컴포넌트 내부에서 async/await로 직접 fetch
+  const response = await fetch("[https://jsonplaceholder.typicode.com/posts](https://jsonplaceholder.typicode.com/posts)", {
+    // Next.js Caching 옵션 지정 가능
+    cache: "force-cache", // 정적 Caching (기본값)
+    // next: { revalidate: 3600 } // 1시간마다 ISR 재검증
+  })
+  const posts: Post[] = await response.json()
+
+  return (
+    <main>
+      <h1>블로그 포스트 목록</h1>
+      <ul>
+        {posts.slice(0, 5).map((post) => (
+          <li key={post.id}>
+            <h3>{post.title}</h3>
+            <p>{post.body}</p>
+          </li>
+        ))}
+      </ul>
+    </main>
+  )
+}
+
+- 서버 컴포넌트 Data Fetching의 장점Zero Bundle Size: Data Fetching에 사용된 라이브러리나 서버 로직이 클라이언트 JavaScript 번들에 포함되지 않아 브라우저 로딩 성능이 향상됩니다.보안 향상: API Key나 DB 인증 정보를 클라이언트에 노출하지 않고 서버 측에서 안전하게 처리할 수 있습니다.워터폴(Waterfall) 현상 방지: 클라이언트-서버 간 왕복(Round-trip) 없이 서버 내부망에서 데이터를 빠르게 조합하여 전달합니다.
+
 ## 9월 23일 (수)
 
 ## Slug (슬러그)의 이해
