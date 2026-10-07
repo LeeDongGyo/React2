@@ -1,6 +1,6 @@
 # 202230124 이동교
 
-9월 30일 (수)
+# 9월 30일 (수)
 
 ## 1. Static Site Generation (SSG)과 Streaming (스트리밍)
 
