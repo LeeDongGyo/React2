@@ -17,6 +17,7 @@ app/
 └── shop/
     └── [[...slug]]/        -> Optional Catch-all Segments
         └── page.tsx
+~~~
 Catch-all ([...slug])/docs/a $\rightarrow$ params.slug = ['a']/docs/a/b/c $\rightarrow$ params.slug = ['a', 'b', 'c']주의: /docs 단독 접속 시 404 에러가 발생합니다.Optional Catch-all ([[...slug]])대괄호를 두 번 감싸면 루트 경로까지 매칭됩니다./shop $\rightarrow$ params.slug = undefined/shop/clothes/tops $\rightarrow$ params.slug = ['clothes', 'tops']코드 구조 (Next.js 15 기준)코드 스니펫export default async function DocsPage({
   params,
 }: {
