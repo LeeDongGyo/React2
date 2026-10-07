@@ -2,10 +2,6 @@
 
 9월 30일 (수)
 
-# Next.js 15 고급 성능 최적화 및 빌드 전략
-
----
-
 ## 1. Static Site Generation (SSG)과 Streaming (스트리밍)
 
 ### 개념
