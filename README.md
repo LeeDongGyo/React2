@@ -1,5 +1,140 @@
 # 202230124 이동교
 
+## 10월 7일 (수)
+
+## Next.js 개념 및 최적화 슬라이드 정리
+
+## 1. generateStaticParams를 사용하는 경우 실습
+
+- **동적 라우트 탐색**: 빌드 시점에 Next.js가 `app/blog3/[slug]/page.tsx` 같은 동적 라우트를 찾으면 `generateStaticParams()`를 실행합니다.
+- **반환 값 형태**: `generateStaticParams()`가 반환하는 값은 다음과 같은 배열 구조 형태입니다.
+
+```js
+[
+  { "slug": "hello" },
+  { "slug": "world" },
+  { "slug": "nextjs" }
+]
+```
+
+- **정적 HTML 생성 과정**: 각 `params`에 대해 `page.tsx`를 실행하여 정적 HTML을 생성합니다.
+  - `params = { slug: "hello" }` → `/blog/hello/index.html`
+  - `params = { slug: "world" }` → `/blog/world/index.html`
+  - `params = { slug: "nextjs" }` → `/blog/nextjs/index.html`
+
+### 📌 정리
+
+- `generateStaticParams()` 자체는 slug 배열만 반환합니다.
+- Next.js 빌드 프로세스가 이 배열을 순회하며 각 slug에 대해 `page.tsx`를 실행하여 정적 HTML을 생성합니다.
+- `map` 함수는 HTML을 작성해야 할 리스트를 Next.js에게 전달하는 역할을 합니다.
+
+## 2. generateStaticParams가 없는 경우와 있는 경우 비교
+
+**generateStaticParams가 없는 경우**
+
+- Next.js는 slug 값을 빌드 타임에는 모르는 상태입니다.
+- 따라서 slug 페이지에 접속하면 Next.js가 서버에서 요청할 때마다 해당 페이지를 동적으로 렌더링하며, 빌드의 결과물로 HTML 파일은 생성되지 않습니다.
+
+**generateStaticParams가 있는 경우**
+
+- Next.js에 빌드 타임에 생성할 slug 목록을 알려줄 수 있습니다.
+- 이 경우에는 지정한 slug에 대해서는 정적 HTML + JSON이 빌드 타임에 생성되어, 최초 접근 시 SSR 필요 없이 미리 만들어진 페이지를 제공합니다.
+
+### 📊 비교표
+
+| 항목 | generateStaticParams 없음 | generateStaticParams 있음 |
+| --- | --- | --- |
+| 페이지 생성 시점 | 요청 시 서버에서 생성 (SSR/ISR) | 빌드 타임에 생성 (SSG) |
+| 초기 로딩 속도 | 서버 렌더링 필요 → 상대적으로 느림 | 정적 HTML 제공 → 매우 빠름 |
+| SEO | 가능하긴 함, 하지만 요청 시 생성 | 매우 유리 (검색엔진 즉시 HTML 크롤링 가능) |
+| 유연성 | slug를 무한정 지원 가능 (DB 조회 등) | slug를 미리 알아야 함 (동적 slug는 제한적) |
+
+## 3. await이 없어도 async를 붙여 두는 이유
+
+Next.js 13+의 App Router에서 `page.tsx` 같은 Server Component는 비동기 렌더링을 전제로 하고 있습니다. 즉, `page.tsx` 안에서 데이터를 fetch하는 경우가 많기 때문에 `async`를 기본으로 붙여도 전혀 문제가 없습니다.
+
+- **일관성 유지**
+  - 같은 프로젝트 안에서 어떤 페이지는 `async`, 어떤 페이지는 일반 function이면 혼란스러울 수 있습니다.
+  - Next.js 공식 문서도 대부분 `async function`으로 예시를 작성합니다.
+- **확장성**
+  - 지금은 더미 데이터(`posts.find(...)`)를 쓰지만, 나중에 DB나 API에서 데이터를 가져올 때 `await fetch(...)` 같은 코드가 들어갈 수 있기 때문에 미리 `async`를 붙여 두면 수정할 필요가 없습니다.
+- **React Server Component 호환성**
+  - Server Component는 Promise를 반환할 수 있어야 하고, Next.js는 내부적으로 async 함수 패턴에 맞춰 최적화된 렌더링 파이프라인을 갖고 있어서 `async`가 붙어 있어도 불필요한 오버헤드가 거의 없습니다.
+
+## 4. 느린 네트워크 (Slow Network)
+
+네트워크가 느리거나 불안정한 경우, 사용자가 링크를 클릭하기 전에 프리페칭(Prefetching)이 완료되지 않을 수 있습니다.
+
+- 이것은 정적 경로와 동적 경로 모두에 영향을 미칠 수 있습니다.
+- 이 경우, `loading.tsx` 파일이 아직 프리페칭되지 않았기 때문에 즉시 표시되지 않을 수 있습니다.
+- 체감 성능을 개선하기 위해 `useLinkStatus` Hook을 사용하여 전환이 진행되는 동안 사용자에게 인라인 시각적 피드백을 표시할 수 있습니다. (예: 링크의 스피너 또는 텍스트 글리머)
+
+```tsx
+// app/ui/loading-indicator.tsx
+'use client'
+
+import { useLinkStatus } from 'next/link'
+
+export default function LoadingIndicator() {
+  const { pending } = useLinkStatus()
+  return pending ? (
+    <div role="status" aria-label="Loading" className="spinner" />
+  ) : null
+}
+```
+
+## 5. 프리페칭 비활성화 (Disabling Prefetching)
+
+`<Link>` 컴포넌트에서 `prefetch={false}`로 설정하여 프리페치를 사용하지 않도록 선택할 수 있습니다. 이는 대량의 링크 목록(예: 무한 스크롤 테이블)을 렌더링할 때 불필요한 리소스 사용을 방지하는 데 유용합니다.
+
+```tsx
+<Link prefetch={false} href="/blog">
+  Blog
+</Link>
+```
+
+### 프리페칭 비활성화 시 단점
+
+- **정적 라우팅**: 사용자가 링크를 클릭할 때만 가져옵니다.
+- **동적 라우팅**: 클라이언트가 해당 경로로 이동하기 전에 서버에서 먼저 렌더링되어야 합니다.
+
+> **권장 대안**: 프리페치를 완전히 비활성화하지 않고 리소스 사용량을 줄이려면, 마우스 호버 시에만 프리페치를 사용하면 됩니다. 이렇게 하면 뷰포트의 모든 링크가 아닌, 사용자가 방문할 가능성이 높은 경로로만 프리페치가 제한됩니다.
+
+## 6. Hydration이 완료되지 않음 (Hydration Not Complete)
+
+`<Link>`는 클라이언트 컴포넌트이기 때문에 라우팅 페이지를 프리페치하기 전에 하이드레이션(Hydration)해야 합니다. 초기 방문 시 대용량 자바스크립트 번들로 인해 하이드레이션이 지연되어 프리페칭이 바로 시작되지 않을 수 있습니다.
+
+React는 선택적 Hydration (Selective Hydration)을 통해 이를 완화하며, 다음과 같은 방법으로 이를 더욱 개선할 수 있습니다.
+
+- `@next/bundle-analyzer` 플러그인을 사용하면 대규모 종속성을 제거하여 번들 크기를 식별하고 줄일 수 있습니다.
+- 가능하다면 클라이언트에서 서버로 로직을 이동합니다. (자세한 내용은 서버 및 클라이언트 컴포넌트 문서 참조)
+
+## 7. 네이티브 히스토리 API (Native History API)
+
+Next.js를 사용하면 기본 `window.history.pushState` 및 `window.history.replaceState` 메서드를 사용하여 페이지를 다시 로드하지 않고도 브라우저의 기록 스택을 업데이트할 수 있습니다. `pushState` 및 `replaceState` 호출은 Next.js 라우터에 통합되어 `usePathname` 및 `useSearchParams`와 동기화할 수 있습니다.
+
+### window.history.pushState
+
+- 브라우저의 기록 스택에 새 항목을 추가할 때 사용합니다.
+- 사용자는 이전 상태로 돌아갈 수 있습니다.
+- 예시: 제품 목록을 정렬할 때
+
+### window.history.replaceState
+
+- 브라우저의 기록 스택에서 현재 항목을 바꾸려면 이 기능을 사용합니다.
+- 사용자는 이전 상태로 돌아갈 수 없습니다.
+- 예시: 애플리케이션의 로케일(Locale)을 전환하는 경우
+
+> **Locale(로케일)**: 사용자의 언어, 지역, 날짜/시간 형식, 숫자 표기법 등 사용자 인터페이스에서 사용되는 다양한 설정을 정의하는 문자열.
+
+## 8. Server & Client Components 개요 (Introduction)
+
+- 기본적으로 `layout`과 `page`는 **Server Component**입니다.
+- 서버에서 데이터를 가져와 UI의 일부를 렌더링할 수 있고, 선택적으로 결과를 캐시(cache)한 후 클라이언트로 스트리밍(streaming)할 수 있습니다.
+- 상호작용이나 브라우저 API가 필요한 경우 **Client Component**를 사용하여 기능을 계층화할 수 있습니다.
+- Next.js에서 Server 및 Client Component가 작동하는 방식과 이를 사용하는 시기, 애플리케이션에서 이 컴포넌트들을 활용하는 방법에 대한 기본 개념을 파악하는 것이 중요합니다.
+
+
 # 9월 30일 (수)
 
 ## 1. Static Site Generation (SSG)과 Streaming (스트리밍)
