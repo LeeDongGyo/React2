@@ -1,5 +1,102 @@
 # 202230124 이동교
 
+## 10월 14일 (수)
+
+# 문서의 코드는 `/app/ui/counter.tsx`를 작성했지만, `src` 디렉토리를 사용하는 경우는 다음과 같이 관리하는 것이 일반적입니다.
+
+- `src/app/` 아래에는 라우팅 페이지만 작성하고 관리합니다.
+- 기타 사용자 정의 component나 library는 `src/` 아래에 작성하고 관리합니다.
+
+# [실습1] 따라서 이번 실습 코드는 `src/components` 디렉토리를 만들고 Counter 컴포넌트를 작성합니다.
+
+```tsx
+"use client";
+
+import { useState } from "react";
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>{count} likes</p>
+      <button onClick={() => setCount(count + 1)}>Click me</button>
+    </div>
+  );
+}
+```
+
+```tsx
+import Link from "next/link";
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body>
+        <header>
+          <p>=== Root Layout Header ===</p>
+          <nav>
+            <Link href="/">Home</Link> | <Link href="/counter">Counter</Link>
+            <br />
+            <br />
+            Slug Page Menu :&nbsp;
+            <Link href="/nextjs">nextjs</Link>&nbsp;|&nbsp;
+            <Link href="/routing">routing</Link>&nbsp;|&nbsp;
+            <Link href="/ssr-ssg">ssr-sge</Link>&nbsp;|&nbsp;
+            <Link href="/dynamic-routes">dynamic-routes</Link>
+          </nav>
+        </header>
+        <main>{children}</main>
+        <footer>=== Root Layout Footer ===</footer>
+      </body>
+    </html>
+  );
+}
+```
+
+## 3-2. JS bundle 크기 줄이기
+
+- client JavaScript 번들의 크기를 줄이려면 UI의 큰 부분을 client component로 표시하는 대신 특정 대화형 component에 "use client"를 추가합니다.
+
+- **예를 들어**, 다음 예제의 `<Layout>` component는 로고와 탐색 링크와 같은 정적 요소가 대부분이지만 대화형 검색창이 포함되어 있습니다.
+
+- `<Search />`는 대화형이기 때문에 client component가 되어야 하지만, 나머지 layout은 server component로 유지될 수 있습니다.
+
+  **# 나머지 layout은 server component로 유지해야 합니다!**
+
+```tsx
+// Client Component
+import Search from "./search";
+// Server Component
+import Logo from "./logo";
+
+// Layout is a Server Component by default
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <nav>
+        <Logo />
+        <Search />
+      </nav>
+      <main>{children}</main>
+    </>
+  );
+}
+```
+
+```tsx
+"use client";
+
+export default function Search() {
+  // ...
+}
+```
+
+
 ## 10월 7일 (수)
 
 ## Next.js 개념 및 최적화 슬라이드 정리
