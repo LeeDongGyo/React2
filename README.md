@@ -1,5 +1,159 @@
 # 202230124 이동교
 
+## 10월 28 (수)
+
+### Counter 컴포넌트의 사용 목적
+
+Counter 컴포넌트를 작성하는 이유는 사용할 목적이 있기 때문입니다. 대표적인 컴포넌트의 사용 목적은 다음과 같습니다.
+
+- 다른 컴포넌트의 완성을 위해 사용합니다.
+- 라우팅 페이지의 렌더링을 위해 사용합니다.
+
+### 실습 2. Counter 페이지 만들기
+
+라우팅 페이지를 만들고, `Counter` 컴포넌트를 호출할 수 있도록 작성합니다.
+
+
+**`src/app/layout.tsx`**
+
+```tsx
+import Link from "next/link";
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body>
+        <header>
+          <p>=== Root Layout Header ===</p>
+          <nav>
+            <Link href="/">Home</Link> |{" "}
+            <Link href="/counter">Counter</Link>
+            <br />
+            <br />
+            Slug Page Menu :&nbsp;
+            <Link href="/nextjs">nextjs</Link>&nbsp;|&nbsp;
+            <Link href="/routing">routing</Link>&nbsp;|&nbsp;
+            <Link href="/ssr-ssg">ssr-ssg</Link>&nbsp;|&nbsp;
+            <Link href="/dynamic-routes">dynamic-routes</Link>
+          </nav>
+        </header>
+        <main>{children}</main>
+        <footer>=== Root Layout Footer ===</footer>
+      </body>
+    </html>
+  );
+}
+```
+
+## 3-2. JS 번들 크기 줄이기
+
+클라이언트 JavaScript 번들의 크기를 줄이려면 UI의 큰 부분을 Client Component로 지정하는 대신, 상호작용이 필요한 특정 컴포넌트에 `"use client"`를 추가합니다.
+
+예를 들어, `Layout` 컴포넌트는 로고와 탐색 링크 같은 정적 요소가 대부분이지만 대화형 검색창도 포함하고 있습니다.
+
+- `Search`는 상호작용이 필요하므로 Client Component로 작성합니다.
+- 나머지 레이아웃은 Server Component로 유지할 수 있습니다.
+
+> **나머지 레이아웃은 Server Component로 유지합니다.**
+
+### Server Component와 Client Component 조합하기
+
+`Search`는 사용자와의 상호작용이 바로 이루어질 가능성이 있으므로 Client Component로 사용합니다. 슬라이드에서는 `Logo`를 이미지 등 용량이 큰 요소를 포함하는 예로 설명하며, Server Component로 사용하는 것을 권장합니다.
+
+**`app/layout.tsx`**
+
+```tsx
+// Client Component
+import Search from "./search";
+// Server Component
+import Logo from "./logo";
+
+// Layout is a Server Component by default
+export default function Layout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <nav>
+        <Logo />
+        <Search />
+      </nav>
+      <main>{children}</main>
+    </>
+  );
+}
+```
+
+**`app/ui/search.tsx`**
+
+```tsx
+"use client";
+
+export default function Search() {
+  // ...
+}
+```
+
+> 이미지 원문에서 `Search`의 import 경로는 `./search`이고 파일 표기는 `app/ui/search.tsx`입니다. 실제 파일이 `app/ui/search.tsx`에 있다면 import 경로를 `./ui/search`로 맞춥니다.
+
+## 3-3. Server Component에서 Client Component로 데이터 전달
+
+`props`를 사용하여 Server Component에서 Client Component로 데이터를 전달할 수 있습니다.
+
+앞에서 작성한 `PostPage`(` /[id]/page.tsx`) Server Component에서는 Client Component인 `LikeButton`에 `likes`를 props로 전달합니다.
+
+### 서버에서 데이터를 조회하여 props로 전달하기
+
+**`app/[id]/page.tsx`**
+
+```tsx
+import LikeButton from "@/app/ui/like-button";
+import { getPost } from "@/lib/data";
+
+export default async function Page({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const post = await getPost(params.id);
+
+  return <LikeButton likes={post.likes} />;
+}
+```
+
+### Client Component에서 props 받기
+
+**`app/ui/like-button.tsx`**
+
+```tsx
+"use client";
+
+export default function LikeButton({ likes }: { likes: number }) {
+  // ...
+}
+```
+
+### 기존 PostPage에서 사용한 부분
+
+```tsx
+return (
+  <div>
+    <main>
+      <h1>{post.title}</h1>
+      {/* ... */}
+      <LikeButton likes={post.likes} />
+    </main>
+  </div>
+);
+```
+
+
 ## 10월 14일 (수)
 
 ### 문서의 코드는 `/app/ui/counter.tsx`를 작성했지만, `src` 디렉토리를 사용하는 경우는 다음과 같이 관리하는 것이 일반적입니다.
