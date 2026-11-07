@@ -1,5 +1,203 @@
 # 202230124 이동교
 
+## 11월 04 (수) 
+
+
+## 3-3. Server에서 Client Component로 데이터 전달
+
+다른 방법으로는 `use` Hook을 사용하여 Server Component에서 Client Component로 데이터를 스트리밍할 수도 있습니다.
+
+예제는 `Fetching Data`에서 소개합니다.
+
+### 💡 알아두면 좋은 정보
+
+Client Component에 전달되는 Props는 React로 **직렬화(Serialization)** 가 가능해야 합니다.
+
+### 직렬화(Serialization)란 무엇인가?
+
+- 일반적으로 메모리에 있는 복잡한 데이터를 바이트의 연속 형태로 변환하는 과정을 말합니다.
+- 즉, 자바스크립트의 객체나 배열처럼 구조가 있는 데이터를 파일로 저장하거나 네트워크로 전송하기 쉽게 만드는 과정입니다.
+- React나 Next.js 같은 프레임워크는 컴포넌트의 상태나 트리 구조를 서버에서 직렬화하여 클라이언트로 전송하고, 클라이언트에서 역직렬화하는 과정을 수행합니다.
+
+
+## Server 및 Client Component Interleaving 실습
+
+### 실습 전 개념 정리
+
+클라이언트 컴포넌트가 껍데기 역할을 하고, 서버 컴포넌트가 그 안의 내용(`children`)으로 들어오는 구조(패턴)를 설명합니다.
+
+### Next.js의 기본 동작
+
+- **Server Component**
+  - 서버에서 렌더링됩니다.
+  - 데이터 패칭이 가능합니다.
+
+- **Client Component**
+  - 브라우저에서 상호작용할 수 있습니다.
+  - `useState`, `useEffect`, 이벤트 핸들러 등을 사용할 수 있습니다.
+
+### 컴포넌트 배치 규칙
+
+서버 컴포넌트 안에는 클라이언트 컴포넌트를 넣을 수 있지만, 그 반대는 직접적으로 불가능합니다.
+
+### 💡 Interleaving이란?
+
+클라이언트 컴포넌트 안에 생성한 `children` 슬롯에 서버 컴포넌트를 끼워 넣는 방식으로 둘을 섞어서 사용하는 아이디어입니다.
+
+서버 컴포넌트에서 클라이언트 컴포넌트로 서버 컴포넌트를 `children`이나 다른 React 노드 Props로 전달할 수 있습니다.
+
+
+## Context란 무엇인가?
+
+### Context의 주요 특징
+
+#### 1. 전역 상태 관리
+
+- Context를 사용하면 애플리케이션의 여러 컴포넌트에서 공유해야 하는 데이터를 중앙 집중적으로 관리할 수 있습니다.
+- 예: 사용자 정보, 테마 설정 등
+
+#### 2. Props Drilling 문제 해결
+
+- 컴포넌트 트리가 깊어질수록 Props를 계속 전달해야 하는 번거로움을 줄여줍니다.
+- Context를 사용하면 필요한 컴포넌트에서 바로 데이터를 가져올 수 있으므로 코드의 가독성을 높이고 유지보수를 용이하게 합니다.
+
+#### 3. React 컴포넌트에서 사용
+
+- Context는 React에서 제공하는 기능입니다.
+- Next.js에서도 React 컴포넌트를 사용하여 구현할 수 있습니다.
+
+
+## Context란 무엇인가?
+
+### Next.js에서 Context 사용 시 고려사항
+
+#### 1. 클라이언트 컴포넌트
+
+Next.js 13부터 App Router 환경에서 클라이언트 컴포넌트 내에 Context를 사용할 수 있습니다.
+
+#### 2. 서버 컴포넌트
+
+서버 컴포넌트에서는 직접 React Context를 생성하거나 사용할 수 없습니다.
+
+하지만 클라이언트 컴포넌트로 데이터를 전달하여 간접적으로 사용할 수 있습니다.
+
+#### 3. 성능
+
+Context를 과도하게 사용하면 렌더링 성능에 영향을 줄 수 있으므로 필요한 경우에만 신중하게 사용해야 합니다.
+
+
+## Context란 무엇인가?
+
+### Context 사용 예제
+
+`MyContext`는 Context 객체를 나타내고, `MyContext.Provider`는 `MyComponent`에 데이터를 제공합니다.
+
+`useContext(MyContext)`를 통해 `MyComponent`는 `"Hello from Context"` 값을 가져와 렌더링합니다.
+
+### 1. Context 생성 및 사용
+
+```jsx
+import React, { createContext, useContext } from 'react';
+
+// Context 생성
+const MyContext = createContext();
+
+function MyComponent() {
+  const value = useContext(MyContext);
+
+  return <div>{value}</div>;
+}
+```
+
+### 2. Provider를 통한 데이터 전달
+
+```jsx
+function App() {
+  return (
+    <MyContext.Provider value="Hello from Context">
+      <MyComponent />
+    </MyContext.Provider>
+  );
+}
+```
+
+### 실행 결과
+
+```text
+Hello from Context
+```
+
+**동작 원리**
+
+1. `createContext()`로 Context를 생성합니다.
+2. `Provider`에서 공유할 값을 설정합니다.
+3. `useContext()`로 해당 값을 가져옵니다.
+4. 가져온 값을 화면에 렌더링합니다.
+
+
+## Context란 무엇인가?
+
+## 3-5. Context Provider (컨텍스트 제공자)
+
+- React Context는 일반적으로 아래 테마처럼 전역 상태를 공유하는 데 사용됩니다.
+- 그러나 Server Component에서는 React Context를 직접 사용할 수 없습니다.
+- Context를 사용하려면 `children`을 허용하는 Client Component로 만들어야 합니다.
+
+### ThemeProvider 예제
+
+**파일명:** `app/theme-provider.tsx`
+
+```tsx
+'use client'
+
+import { createContext } from 'react'
+
+export const ThemeContext = createContext({})
+
+export default function ThemeProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <ThemeContext.Provider value="dark">
+      {children}
+    </ThemeContext.Provider>
+  )
+}
+```
+
+### 코드 설명
+
+- `'use client'`: 클라이언트 컴포넌트임을 선언합니다.
+- `createContext()`: Context 객체를 생성합니다.
+- `ThemeContext.Provider`: 하위 컴포넌트에 데이터를 제공합니다.
+- `value="dark"`: 공유할 테마 값을 설정합니다.
+- `{children}`: Provider 내부에 포함된 하위 컴포넌트를 렌더링합니다.
+
+> **참고:** 이미지의 예제는 Context 기본값으로 `{}`를 사용하지만 Provider에서는 문자열을 전달합니다. TypeScript에서는 타입 오류가 발생할 수 있으므로 실제 구현 시 `createContext('light')`처럼 문자열 타입으로 맞추는 것이 좋습니다.
+
+
+## 3-5. Context Provider (컨텍스트 제공자)
+
+### 💡 알아두면 좋은 정보
+
+- Provider 컴포넌트를 트리에서 가능한 한 깊숙이 렌더링해야 합니다.
+
+- `ThemeProvider`가 전체 `<html>` 문서 대신 `{children}`만 래핑하는 방식을 주목하세요.
+
+- 이렇게 하면 Next.js가 Server Component의 정적 부분을 더 쉽게 최적화할 수 있습니다.
+
+### 핵심 정리
+
+1. Context는 여러 컴포넌트에서 데이터를 공유할 때 사용합니다.
+2. Server Component에서는 React Context를 직접 사용할 수 없습니다.
+3. Context Provider는 Client Component로 선언해야 합니다.
+4. Provider를 통해 하위 Client Component에 데이터를 전달할 수 있습니다.
+5. Provider는 필요한 컴포넌트 범위에만 적용하는 것이 좋습니다.
+
+
+
 ## 10월 28 (수)
 
 ### Counter 컴포넌트의 사용 목적
