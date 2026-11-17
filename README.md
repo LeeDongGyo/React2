@@ -1,5 +1,124 @@
 # 202230124 이동교
 
+## 11월 11일 (수) 
+
+### 1. Context 생성 (theme-provider.tsx)
+
+# Context Provider의 실행 과정 리뷰
+
+## 1. Context 생성 (theme-provider.tsx)
+
+- `createContext(...)`로 Context 객체를 만듭니다.
+  - 초기값(default value)은 Provider가 없을 때 사용할 fallback 값입니다.
+  - 여기서는 `theme: 'light'`, `toggleTheme: () => {}`를 사용합니다.
+
+- 이 파일 내부에서 ThemeProvider 컴포넌트를 정의합니다.
+  - `useState`로 theme 상태를 관리합니다. (예: `'light' | 'dark'`)
+  - `toggleTheme` 함수는 `setTheme`을 호출해 상태를 변경합니다.
+  - `useEffect`로 상태 변경 시 `document.documentElement.dataset.theme`에 값을 기록합니다.
+    - 전역 스타일 적용 용도
+  - `ThemeContext.Provider`에 `value={{ theme, toggleTheme }}`를 넣고 children을 감싸 줍니다.
+
+### 요약
+상태(state)와 상태를 바꾸는 함수(toggle)를 만든 뒤 Provider의 value로 내려줍니다. 상태는 Provider 내부에 보관됩니다.
+
+### 2. Context Provider 실행 순서
+
+# Context Provider 순서도 형식으로 정리
+
+## 8. 부수효과 실행 (useEffect)
+
+- theme 변경으로 ThemeProvider의 useEffect가 실행되어 `document.documentElement.dataset.theme = theme`로 설정합니다.
+- 파일: `theme-provider.tsx` (useEffect)
+
+## 9. 리렌더링 전파
+
+- state 변경으로 Provider와 그 하위 Consumer들이 최신 value를 받아 리렌더링됩니다.
+- ThemeStatus는 새로운 theme 값을 받아 UI(아이콘/텍스트)를 갱신합니다.
+
+## 10. 결과: 레이아웃/스타일 반영
+
+- data-theme 속성 변경을 바탕으로 CSS(`[data-theme="dark"]` 등)가 적용되면 실제 시각적 테마 변경이 화면에 반영됩니다.
+- 파일: 전역 CSS 또는 별도 스타일 파일
+
+### 3. 외부(서드 파티) Component - Client Component 내부 사용
+
+# 3-6. 외부(서드 파티) Component
+
+> 실습은 뒤에서 합니다. 여기서는 이론에만 집중해 주세요.
+
+- Client 전용 기능에 의존하는 외부 Component를 사용하는 경우, 해당 Component를 Client Component에 래핑하여 예상대로 작동하는지 확인할 수 있습니다.
+
+- 예를 들어, `<Carousel />`은 `acme-carousel` 패키지에서 가져올 수 있습니다.
+
+- 이 Component는 `useState`를 사용하지만 `"use client"` 지시문은 없습니다.
+
+### 그렇다면 "use client" 지시문 없이 어떻게 사용할 수 있을까요?
+
+Client Component 내부에서 `<Carousel />`을 사용하면 예상대로 작동합니다.
+
+### 코드 예시 (app/gallery.tsx)
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+import { Carousel } from 'acme-carousel'
+
+export default function Gallery() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div>
+      <button onClick={() => setIsOpen(true)}>View pictures</button>
+      {/* Works, since Carousel is used within a Client Component */}
+      {isOpen && <Carousel />}
+    </div>
+  )
+}
+```
+
+### 4. 외부(서드 파티) Component - Client Component로 래핑
+
+# 3-6. 외부(서드 파티) Component
+
+## Server Component에서 외부 Component 사용하기
+
+- 그러나 Server Component 내에서 직접 사용하려고 하면 오류가 발생합니다.
+
+- 이는 Next.js가 `<Carousel />`이 Client 전용 기능을 사용하고 있다는 것을 알지 못하기 때문입니다.
+
+- 이 문제를 해결하려면 Client 전용 기능에 의존하는 외부 Component를 자체 Client Component로 래핑할 수 있습니다.
+
+### 코드 예시 (app/carousel.tsx)
+
+```tsx
+'use client'
+
+import { Carousel } from 'acme-carousel'
+
+export default Carousel
+```
+
+- 이제 Server Component 내에서 `<Carousel />`을 직접 사용할 수 있습니다.
+
+### 코드 예시 (app/page.tsx)
+
+```tsx
+import Carousel from './carousel'
+
+export default function Page() {
+  return (
+    <div>
+      <p>View pictures</p>
+      {/* Works, since Carousel is a Client Component */}
+      <Carousel />
+    </div>
+  )
+}
+```
+
+
 ## 11월 04 (수) 
 
 
