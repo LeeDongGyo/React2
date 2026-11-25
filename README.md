@@ -1,5 +1,109 @@
 # 202230124 이동교
 
+## 11월 18일 (수) 
+
+## 3-6. 외부(서드 파티) Component
+
+### [ 라이브러리 작성자를 위한 조언 ]
+
+- component 라이브러리를 빌드하는 경우, client 전용 기능에 의존하는 진입점에 `"use client"` 지시문을 추가합니다.
+
+- 이렇게 하면 사용자가 래퍼를 만들 필요 없이 component를 server component로 가져올 수 있습니다.
+
+- 일부 번들러는 `"use client"` 지시어를 제거할 수 있습니다.
+
+- React Wrap Balancer 및 Vercel Analytics 저장소에서 `"use client"` 지시어를 포함하도록 esbuild를 구성하는 방법의 예를 확인할 수 있습니다.
+
+## 3-7. 환경 변수 노출 예방
+
+- JavaScript 모듈은 server 및 client component 모듈 간에 공유될 수 있습니다.
+
+- 이 말의 의미는 실수로 server 전용 코드를 client로 가져올 수도 있습니다.
+
+- 예를 들어 다음 함수를 살펴보겠습니다.
+
+### 예제 코드
+
+파일: `lib/data.ts`
+
+\```typescript
+export async function getData() {
+  const res = await fetch('https://external-service.com/data', {
+    headers: {
+      authorization: process.env.API_KEY,
+    },
+  })
+
+  return res.json()
+}
+\```
+
+## 3-7. 환경 변수 노출 예방
+
+- Next.js는 server-only 및 client-only 모듈 import를 내부적으로 처리하여, 모듈이 잘못된 환경에서 사용될 경우 더 명확한 오류 메시지를 제공합니다.
+
+- npm에서 제공하는 관련 패키지의 내용은 Next.js에서 사용되지 않습니다.
+
+- 또한 Next.js는 `noUncheckedSideEffectImports` 옵션이 활성화된 TypeScript 환경을 위해서, server-only 및 client-only에 대한 자체 타입 선언을 제공합니다.
+
+# 1. Fetching Data (데이터 가져오기)
+
+## 1-1. 서버 컴포넌트
+
+서버 컴포넌트에서 데이터를 fetch하는 방법은 두 가지가 있습니다.
+
+1. fetch API
+2. ORM 또는 데이터베이스
+
+### [ 1. fetch API 사용 ]
+
+- 데이터를 가져오려면 fetch API를 사용하여 컴포넌트를 비동기식 함수로 변환한 다음 fetch의 호출을 기다립니다.
+
+- 예를 들어:
+
+### 예제 코드
+
+파일: `app/blog/page.tsx`
+
+\```tsx
+export default async function Page() {
+  const data = await fetch('https://api.vercel.app/blog')
+  const posts = await data.json()
+
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>{post.title}</li>
+      ))}
+    </ul>
+  )
+}
+\```
+
+# 1. 데이터 가져오기 (Fetching Data)
+
+## 1-2. 클라이언트 컴포넌트
+
+클라이언트 컴포넌트에서 데이터를 fetch하는 방법은 두 가지가 있습니다.
+
+1. React의 use Hook
+2. SWR 또는 React 쿼리와 같은 통신 라이브러리
+
+### [ 1. use Hook을 사용한 스트리밍 데이터 ]
+
+- React의 use Hook을 사용하여 서버에서 클라이언트로 데이터를 스트리밍합니다.
+
+- 서버 컴포넌트에서 데이터를 먼저 fetch하고, 그 결과(promise)를 클라이언트 컴포넌트에 prop으로 전달합니다.
+
+- 서버 컴포넌트는 async가 가능하기 때문에 await fetch()도 사용 가능합니다.
+
+- 하지만 클라이언트 컴포넌트에서는 async가 불가능하기 때문에 직접 fetch가 불가능합니다. (렌더링 중 fetch 금지)
+
+- 이런 이유 때문에 서버에서 fetch한 결과를 prop으로 넘기고, 클라이언트에서는 use(promise)를 써서 데이터를 가져옵니다.
+
+
+
+
 ## 11월 11일 (수) 
 
 ### 1. Context 생성 (theme-provider.tsx)
